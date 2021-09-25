@@ -27,7 +27,7 @@ jobs:
   function_test:
     name: selenium test
     runs-on: windows-latest
-    needs: deploy
+    #needs: deploy
     
     steps:
       
