@@ -99,20 +99,51 @@ jobs:
   
     - name: Checkout
       uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+    - name: Lint with flake8
+     #stop the build if there are Python syntax errors or undefined names
+     # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+      run: |     
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics    
+        flake8 . --count --exit-zero --statistics
+    - name: Test with pytest
+      run: |
+        pytest --cov=depscan test
      
     - name: sast-scan
   # You may pin to the exact commit or the version.
   # uses: AppThreat/sast-scan-action@4d0f956e6ba3c940a22679fd8fe7cb2e755f3d96
       uses: AppThreat/sast-scan-action@1.0.2
       with:
-        # Source directory to scan. Defaults to workspace
-        src: /github/workspace # optional, default is /github/workspace
-        # Output directory for the generated reports. Defaults to reports
-        output: /github/workspace/reports # optional, default is /github/workspace/reports
-        # Project type. Eg: java, python, nodejs. Comma separated values allowed.
-        type: python # optional
-
-
+        output: reports
+        type: python,credscan
+      env:
+        SCAN_ID: ${{ github.sha }}
+        WORKSPACE: https://github.com/${{ github.repository }}/blob/${{ github.sha }}
+        
+    - name: dep-scan
+      # You may pin to the exact commit or the version.
+      # uses: AppThreat/dep-scan-action@891ef9b33618c5f7be2dcc8674e49f16f7a0b2ee
+      uses: AppThreat/dep-scan-action@v1.0.0
+      env:
+        VDB_HOME: ${{ github.workspace }}/db
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload scan reports
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: sast-scan-reports
+        path: reports
+        
   build_and_push:
     
     name: Docker build and push
@@ -178,13 +209,35 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     
-    - name: OWASP ZAP Baseline Scan
+    #- name: OWASP ZAP Baseline Scan
   # You may pin to the exact commit or the version.
   # uses: zaproxy/action-baseline@3aac1ff9578859a12d8b84c035f4e5394fe79f61
-      uses: zaproxy/action-baseline@v0.5.0
+    #  uses: zaproxy/action-baseline@v0.5.0
+   #   with:
+        # GitHub Token to create issues in the repository
+   #     token: ${{ secrets.GITHUB_TOKEN }} # optional, default is ${{ github.token }}
+        # Target URL
+    #    target: ${{ secrets.TARGET_URL }}
+        # Relative path of the ZAP configuration file
+        #rules_file_name: # optional
+        # The Docker file to be executed
+   #     docker_name: owasp/zap2docker-stable # default is owasp/zap2docker-stable
+        # Additional command line options
+        #cmd_options: # optional
+        # The title for the GitHub issue to be created
+    #    issue_title: ZAP baseline Report # optional, default is ZAP Scan Baseline Report
+        # The action status will be set to fail if ZAP identifies any alerts during the baseline scan
+    #    fail_action: false # optional
+        # The action will file the report to the GitHub issue using the issue_title input
+   #    allow_issue_writing: true # optional, default is true
+
+    - name: OWASP ZAP Full Scan
+    # You may pin to the exact commit or the version.
+    # uses: zaproxy/action-full-scan@1f35897c4c11af6b1203c36b67a5ba99c3c5b5f4
+      uses: zaproxy/action-full-scan@v0.3.0
       with:
         # GitHub Token to create issues in the repository
-        token: ${{ secrets.GITHUB_TOKEN }} # optional, default is ${{ github.token }}
+        token:  ${{ secrets.GITHUB_TOKEN } # optional, default is ${{ github.token }}
         # Target URL
         target: ${{ secrets.TARGET_URL }}
         # Relative path of the ZAP configuration file
@@ -194,8 +247,8 @@ jobs:
         # Additional command line options
         #cmd_options: # optional
         # The title for the GitHub issue to be created
-        issue_title: ZAP baseline Report # optional, default is ZAP Scan Baseline Report
-        # The action status will be set to fail if ZAP identifies any alerts during the baseline scan
+        issue_title: ZAP Full Scan Report # optional, default is ZAP Full Scan Report
+        # The action status will be set to fail if ZAP identifies any alerts during the full scan
         fail_action: false # optional
-        # The action will file the report to the GitHub issue using the issue_title input
+        # Whether Github issues should be created or not
         allow_issue_writing: true # optional, default is true
