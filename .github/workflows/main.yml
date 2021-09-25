@@ -26,7 +26,7 @@ jobs:
   
   function_test:
     name: selenium test
-    runs-on: windows-latest
+    runs-on: macos-latest
     #needs: deploy
     
     steps:
@@ -38,10 +38,10 @@ jobs:
   # You may pin to the exact commit or the version.
   # uses: nanasess/setup-chromedriver@835cae695490330a7e390033b2b5bd67e6f8055e
       uses: nanasess/setup-chromedriver@v1.0.1
-      with:
+      #with:
     # Optional: do not specify to match Chrome's version
-        chromedriver-version: '88.0.4324.96'
-    - run: chromedriver --url-base=/wd/hub &
+        #chromedriver-version: '88.0.4324.96'
+    #- run: chromedriver --url-base=/wd/hub &
     
     - name: Setup Python
       uses: actions/setup-python@v2.2.2
