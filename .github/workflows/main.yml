@@ -18,61 +18,18 @@ env:
   REGISTRY: "registry.digitalocean.com/devsecopstest"
   IMAGE_NAME: "xssable"
 
-  COMMAND: "ifconfig"
+
 
 jobs:
-  #code_check:
-    #name: code check
-    #runs-on: ubuntu-latest
-    #steps:
+     
+  docker_scan:
   
-    #- name: Checkout
-    #  uses: actions/checkout@v2
-      
-   # - name: markdown-link-check
-    # You may pin to the exact commit or the version.
-    # uses: gaurav-nelson/github-action-markdown-link-check@9710f0fec812ce0a3b98bef4c9d842fc1f39d976
-      #uses: gaurav-nelson/github-action-markdown-link-check@1.0.13
-     # with:
-        # Use yes to enable markdown-link-check quiet mode which only list errors.
-      #  use-quiet-mode: no # default is no
-        # Use yes to enable markdown-link-check verbose mode which lists additional details.
-     #   use-verbose-mode: yes # default is no
-        # Specify path to a markdown-link-check JSON configuration file.
-        #config-file: # default is mlc_config.json
-        # Specify path to a custom folder where your markdown files are located.
-      #  folder-path: . # default is .
-        # Specify a max-depth of directories you want to search for markdown files.
-      #  max-depth: 3 # default is -1
-     #   # Use yes to only check for modified markdown files instead of checking all markdown files.
-        #check-modified-files-only: # default is no
-        # Use this to specify the base branch against which the action finds the modififed files.
-      #  base-branch: master # default is master
-        # Use this to specify the file extension of Markdown files.
-      #  file-extension: .md # default is .md
-        # Specify additional files you want to check
-        #file-path: # default is 
-        
-  security_test:
-  
-    name: security check
+    name: docker vuln check
     runs-on: ubuntu-latest
     #needs: code_check
     steps:
   
-    - name: Checkout
-      uses: actions/checkout@v2
-      
-    - name: Install git-secret
-      # You may pin to the exact commit or the version.
-      # uses: Kingmidas74/git-secret-github-action@25e24ea809349f430b23c182836f693bebe483f2
-      uses: Kingmidas74/git-secret-github-action@latest
-      with:
-        #prefix for installation
-       prefix: ''
-       #optional, default is usr/local
-   #  - name: git-secret check
-    #  run: git-secrets --install | git-secrets --add 'password\s*=\s*.+' | git add . | git commit -m "Added"
+
     - name: Build container image
       run: docker build -t fordockerscan .
     
@@ -104,18 +61,62 @@ jobs:
         # Whether the action should fail if a vulnerability was found
         fail_on_vulnerabilities: false # optional, default is false   
         
+
+    
+  cred_scan:
+  
+    name: hardcoded cred check
+    runs-on: ubuntu-latest
+    needs: docker_scan
+    steps:
+  
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+    - name: Install git-secret
+      # You may pin to the exact commit or the version.
+      # uses: Kingmidas74/git-secret-github-action@25e24ea809349f430b23c182836f693bebe483f2
+      uses: Kingmidas74/git-secret-github-action@latest
+      with:
+        #prefix for installation
+       prefix: ''
+       #optional, default is usr/local
+   #  - name: git-secret check
+    #  run: git-secrets --install | git-secrets --add 'password\s*=\s*.+' | git add . | git commit -m "Added" 
+    
     - name: Check password
       # You may pin to the exact commit or the version.
       # uses: AlicanAkkus/pinder-action@c488da46c0e9ec52e84811f897fd4a5aaf0b89a6
       uses: AlicanAkkus/pinder-action@1.0.0
-    
-   
+      
+  sast_test:
+  
+    name: sast testing
+    runs-on: ubuntu-latest
+    needs: cred_scan
+    steps:
+  
+    - name: Checkout
+      uses: actions/checkout@v2
+     
+    - name: sast-scan
+  # You may pin to the exact commit or the version.
+  # uses: AppThreat/sast-scan-action@4d0f956e6ba3c940a22679fd8fe7cb2e755f3d96
+      uses: AppThreat/sast-scan-action@1.0.2
+      with:
+        # Source directory to scan. Defaults to workspace
+        src: /github/workspace # optional, default is /github/workspace
+        # Output directory for the generated reports. Defaults to reports
+        output: /github/workspace/reports # optional, default is /github/workspace/reports
+        # Project type. Eg: java, python, nodejs. Comma separated values allowed.
+        type: python # optional
+
 
   build_and_push:
     
     name: Docker build and push
     runs-on: ubuntu-latest
-    needs: security_test
+    needs: sast_test
     steps:
       
     - name: Checkout
@@ -165,3 +166,37 @@ jobs:
             -p 5000:5000 \
             --name $(echo $IMAGE_NAME) \
             $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+            
+            #ip addr
+            ifconfig
+  dast_scan:
+    
+    name: dast scan
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: OWASP ZAP Baseline Scan
+  # You may pin to the exact commit or the version.
+  # uses: zaproxy/action-baseline@3aac1ff9578859a12d8b84c035f4e5394fe79f61
+      uses: zaproxy/action-baseline@v0.5.0
+      with:
+        # GitHub Token to create issues in the repository
+        token: ${{ secrets.GITHUB_TOKEN }} # optional, default is ${{ github.token }}
+        # Target URL
+        target: ${{ secrets.TARGET_URL }}
+        # Relative path of the ZAP configuration file
+        #rules_file_name: # optional
+        # The Docker file to be executed
+        docker_name: owasp/zap2docker-stable # default is owasp/zap2docker-stable
+        # Additional command line options
+        #cmd_options: # optional
+        # The title for the GitHub issue to be created
+        issue_title: ZAP baseline Report # optional, default is ZAP Scan Baseline Report
+        # The action status will be set to fail if ZAP identifies any alerts during the baseline scan
+        fail_action: false # optional
+        # The action will file the report to the GitHub issue using the issue_title input
+        allow_issue_writing: true # optional, default is true
