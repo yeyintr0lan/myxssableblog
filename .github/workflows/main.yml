@@ -237,7 +237,7 @@ jobs:
       uses: zaproxy/action-full-scan@v0.3.0
       with:
         # GitHub Token to create issues in the repository
-        token:  ${{ secrets.GITHUB_TOKEN } # optional, default is ${{ github.token }}
+        token: ${{ secrets.GITHUB_TOKEN } # optional, default is ${{ github.token }}
         # Target URL
         target: ${{ secrets.TARGET_URL }}
         # Relative path of the ZAP configuration file
