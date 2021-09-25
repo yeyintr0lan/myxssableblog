@@ -17,6 +17,7 @@ on:
 env:
   REGISTRY: "registry.digitalocean.com/devsecopstest"
   IMAGE_NAME: "xssable"
+  LOGINPASS: ${{ secrets.LOGINPASS }}
 
 
 
@@ -180,7 +181,7 @@ jobs:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           KEY: ${{ secrets.SSHKEY }}
-          envs: IMAGE_NAME,REGISTRY,GITHUB_SHA,COMMAND
+          envs: IMAGE_NAME,REGISTRY,GITHUB_SHA
           script: |
             docker login $REGISTRY -u ${{ secrets.DIGITAL_OCEAN_DOCKER_KEY }} -p ${{ secrets.DIGITAL_OCEAN_DOCKER_KEY }}
             # Stop running container
@@ -195,12 +196,43 @@ jobs:
             -p 5000:5000 \
             --name $(echo $IMAGE_NAME) \
             $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
-
+  
+  function_test:
+    name: selenium test
+    runs-on: windows-latest
+    needs: deploy
+    
+    steps:
+      
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: setup-chromedriver
+  # You may pin to the exact commit or the version.
+  # uses: nanasess/setup-chromedriver@835cae695490330a7e390033b2b5bd67e6f8055e
+      uses: nanasess/setup-chromedriver@v1.0.1
+    
+    - name: Setup Python
+      uses: actions/setup-python@v2.2.2
+      
+      with:
+        envs: LOGINPASS,GITHUB_SHA
+        # Version range or exact version of a Python version to use, using SemVer's version range syntax.
+        python-version: 3 # optional, default is 3.x
+        # The target architecture (x86, x64) of the Python interpreter.
+        #architecture: # optional
+        # Used to pull python distributions from actions/python-versions. Since there's a default, this is typically not supplied by the user.
+        token: ${{ secrets.GITHUB_TOKEN }} # optional, default is ${{ github.token }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium
+          python seleniumtest.py
+      
   dast_scan:
     
     name: dast scan
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: function_test
     steps:
       
     - name: Checkout
@@ -249,3 +281,5 @@ jobs:
         fail_action: false # optional
         # Whether Github issues should be created or not
         allow_issue_writing: true # optional, default is true
+
+  
