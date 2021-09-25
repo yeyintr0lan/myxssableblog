@@ -19,6 +19,7 @@ driver.find_element_by_xpath("//button[@class='btn btn-primary']").click()
 #driver.find_element_by_class_name("mt-5") == "Hi, John!"
 if(driver.find_element_by_xpath("//button[@class='btn btn-secondary']").is_displayed()):
     #print("Login testing Success!")
+    os.system('echo $LOGINPASS')
     os.system('echo Login testing Success')
 else:
     #print("Login failed!")
