@@ -11,8 +11,10 @@ driver.find_element_by_name("password").send_keys("12345")
 driver.find_element_by_xpath("//button[@class='btn btn-primary']").click()
 #driver.find_element_by_class_name("mt-5") == "Hi, John!"
 if(driver.find_element_by_class_name("mt-5").is_displayed()):
-    print("Login testing Success!")
+    #print("Login testing Success!")
+    os.system('echo Login testing Success')
 else:
-    print("Login failed!")
+    #print("Login failed!")
+    os.system('echo Login testing Failed')
 driver.close()
 
